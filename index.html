@@ -242,6 +242,21 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .detail-tx-row:last-child{border-bottom:none;}
 .detail-empty{color:#5a6478;text-align:center;padding:24px;font-size:.85rem;}
 
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 36px;width:100%;max-width:380px;margin:16px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.login-logo{width:72px;height:72px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;}
+.login-title{font-size:1.6rem;font-weight:700;margin-bottom:6px;}
+.login-title span{color:var(--green);}
+.login-sub{font-size:.87rem;color:var(--text2);margin-bottom:32px;line-height:1.6;}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px 20px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.93rem;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-google:hover{border-color:var(--blue);background:var(--blue-dim);transform:translateY(-1px);}
+.btn-google svg{width:20px;height:20px;flex-shrink:0;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-size:.8rem;}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;}
+.btn-logout{padding:5px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .18s;}
+.btn-logout:hover{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+
 @media(max-width:640px){
   .nav-btn{padding:7px 8px;font-size:.73rem;}
   .cards{grid-template-columns:1fr 1fr;}
@@ -251,6 +266,24 @@ tr:hover td{background:rgba(255,255,255,.02);}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">💰</div>
+    <div class="login-title">Fin<span>Track</span></div>
+    <p class="login-sub">Gestión financiera personal.<br>Inicia sesión para acceder a tus datos.</p>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Entrar con Google
+    </button>
+  </div>
+</div>
 
 <!-- LOADING -->
 <div id="loading-screen">
@@ -291,6 +324,11 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <div class="sync-dot syncing" id="sync-dot"></div>
       <span id="sync-label">Conectando...</span>
     </div>
+    <div class="user-chip">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span id="user-name" style="color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    </div>
+    <button class="btn-logout" onclick="signOutUser()">Cerrar sesión</button>
   </div>
   <nav class="nav">
     <button class="nav-btn active" onclick="setTab('dashboard')">📊 Dashboard</button>
@@ -504,6 +542,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBlxXpkAs-7UowVbmmA2i3CnrptckTUCK8",
@@ -517,6 +556,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 const DOC_REF = doc(db, "fintrack", "data");
 
 // ── CONSTANTS ──────────────────────────────
@@ -560,7 +601,7 @@ async function saveToCloud(){
 
 // ── REALTIME LISTENER ──────────────────────
 function startRealtimeSync(){
-  onSnapshot(DOC_REF, (snap) => {
+  return onSnapshot(DOC_REF, (snap) => {
     if(snap.exists()){
       const data = snap.data();
       state.txs = data.txs || [];
@@ -1837,11 +1878,53 @@ function lineChart(id, data){
   container.appendChild(hint);
 }
 
+// ── AUTH ACTIONS ───────────────────────────
+window.signInWithGoogle = async function(){
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    console.error('Sign-in error:', e);
+  }
+};
+
+window.signOutUser = async function(){
+  try {
+    await signOut(auth);
+  } catch(e) {
+    console.error('Sign-out error:', e);
+  }
+};
+
 // ── INIT ───────────────────────────────────
 document.getElementById('f-fecha').value=now.toISOString().split('T')[0];
 setTipo('egreso');
-buildSels(); buildHistFilters(); buildAdvSels();
-startRealtimeSync();
+
+let realtimeUnsubscribe = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Authenticated — show loading then app
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('loading-screen').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('user-name').textContent = user.displayName || user.email || '';
+    document.getElementById('user-avatar').textContent = (user.displayName || user.email || '?')[0].toUpperCase();
+    buildSels(); buildHistFilters(); buildAdvSels();
+    if (!realtimeUnsubscribe) {
+      realtimeUnsubscribe = startRealtimeSync();
+    }
+  } else {
+    // Not authenticated — stop sync and show login
+    if (realtimeUnsubscribe) {
+      realtimeUnsubscribe();
+      realtimeUnsubscribe = null;
+    }
+    state = {txs:[], debts:[]};
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+});
 </script>
 </body>
 </html>
